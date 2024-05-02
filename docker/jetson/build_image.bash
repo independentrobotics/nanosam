@@ -1,1 +1,1 @@
-DOCKER_BUILDKIT=0 docker build -t ros-sam-owl -f ./ros_sam_owl_jetson.Dockerfile .
+DOCKER_BUILDKIT=0 docker build -t ros-nanosam -f ./ros_nanosam.Dockerfile .

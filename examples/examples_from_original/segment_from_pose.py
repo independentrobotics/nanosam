@@ -16,7 +16,7 @@
 import PIL.Image
 import matplotlib.pyplot as plt
 from nanosam.trt_sam.trt_pose import PoseDetector, pose_to_sam_points
-from nanosam.trt_sam.predictor import Predictor
+from nanosam.nanosam.trt_sam.sam_predictor import SAMPredictor
 
 def get_torso_points(pose):
     return pose_to_sam_points(
@@ -76,7 +76,7 @@ image = PIL.Image.open("assets/john_1.jpg")
 
 detections = pose_model.predict(image)
 
-sam_predictor = Predictor(
+sam_predictor = SAMPredictor(
     "data/resnet18_image_encoder.engine",
     "data/mobile_sam_mask_decoder.engine"
 )
@@ -96,7 +96,7 @@ def subplot_notick(a, b, c):
 def predict_and_show(N, index, pose, fg_points, bg_points):
     subplot_notick(2, N, index + 1)
     points, point_labels = pose_to_sam_points(pose, fg_points, bg_points)
-    mask, _, _ = sam_predictor.predict(points, point_labels)
+    mask, _, _ = sam_predictor.__predict(points, point_labels)
     plt.imshow(image)
     plt.plot(points[point_labels == 1, 0], points[point_labels == 1, 1], 'g.')
     plt.plot(points[point_labels != 1, 0], points[point_labels != 1, 1], 'r.')

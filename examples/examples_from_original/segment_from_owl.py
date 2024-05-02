@@ -17,8 +17,8 @@ import PIL.Image
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-from nanosam.trt_sam.owlvit import OwlVit
-from nanosam.trt_sam.predictor import Predictor
+from nanosam.nanosam.trt_sam.owlvit_predictor import OwlVitPredictor
+from nanosam.nanosam.trt_sam.sam_predictor import SAMPredictor
 
 
 if __name__ == "__main__":
@@ -47,13 +47,13 @@ if __name__ == "__main__":
         plt.plot(x, y, 'g-')
 
 
-    detector = OwlVit(args.thresh)
+    detector = OwlVitPredictor(args.thresh)
 
     image = PIL.Image.open(args.image)
 
     detections = detector.predict(image, texts=args.prompt)
 
-    sam_predictor = Predictor(
+    sam_predictor = SAMPredictor(
         args.image_encoder,
         args.mask_decoder
     )
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         subplot_notick(2, N, index + 1)
         bbox = detections[index]['bbox']
         points, point_labels = bbox2points(bbox)
-        mask, _, _ = sam_predictor.predict(points, point_labels)
+        mask, _, _ = sam_predictor.__predict(points, point_labels)
         plt.imshow(image)
         draw_bbox(bbox)
         subplot_notick(2, N, N + index + 1)

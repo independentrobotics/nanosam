@@ -17,40 +17,40 @@ import PIL.Image
 import cv2
 import numpy as np
 import argparse
-from nanosam.trt_sam.predictor import Predictor
-from nanosam.trt_sam.trt_pose import PoseDetector, pose_to_sam_points
+from nanosam.nanosam.trt_sam.sam_predictor import SAMPredictor
+from nanosam.trt_sam.tracker import Tracker
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")
 parser.add_argument("--mask_decoder", type=str, default="data/mobile_sam_mask_decoder.engine")
 args = parser.parse_args()
 
-def get_torso_points(pose):
-    return pose_to_sam_points(
-        pose,
-        ["left_shoulder", "right_shoulder"],
-        ["nose", "left_ear", "right_ear", "right_wrist", "left_wrist", "left_knee", "right_knee"]
-    )
-
 def cv2_to_pil(image):
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     return PIL.Image.fromarray(image)
 
-pose_model = PoseDetector(
-    "data/densenet121_baseline_att_256x256_B_epoch_160.pth",
-    "assets/human_pose.json"
-)
-
-predictor = Predictor(
+predictor = SAMPredictor(
     args.image_encoder,
     args.mask_decoder
 )
 
+tracker = Tracker(predictor)
+
 mask = None
+point = None
 
 cap = cv2.VideoCapture(0)
 
+
+def init_track(event,x,y,flags,param):
+    global mask, point
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        mask = tracker.init(image_pil, point=(x, y))
+        point = (x, y)
+
+
 cv2.namedWindow('image')
+cv2.setMouseCallback('image',init_track)
 
 while True:
 
@@ -62,33 +62,28 @@ while True:
 
     image_pil = cv2_to_pil(image)
 
-    detections = pose_model.predict(image_pil)
-
-    if len(detections) > 0:
-        pose = detections[0]
-
-        points, point_labels = get_torso_points(detections[0])
-
-        predictor.set_image(image_pil)
-        mask, _, _ = predictor.predict(points, point_labels)
+    if tracker.token is not None:
+        mask, point = tracker.update(image_pil)
     
-        # Draw mask
-        if mask is not None:
-            bin_mask = (mask[0,0].detach().cpu().numpy() < 0)
-            green_image = np.zeros_like(image)
-            green_image[:, :] = (0, 185, 118)
-            green_image[bin_mask] = 0
+    # Draw mask
+    if mask is not None:
+        bin_mask = (mask[0,0].detach().cpu().numpy() < 0)
+        green_image = np.zeros_like(image)
+        green_image[:, :] = (0, 185, 118)
+        green_image[bin_mask] = 0
 
-            image = cv2.addWeighted(image, 0.4, green_image, 0.6, 0)
+        image = cv2.addWeighted(image, 0.4, green_image, 0.6, 0)
 
+    # Draw center
+    if point is not None:
 
-        for pt, lab in zip(points, point_labels):
-            xy = (int(pt[0]), int(pt[1]))
-            if lab == 1:
-                cv2.circle(image, xy, 8, (0, 185, 118), -1)
-            else:
-                cv2.circle(image, xy, 8, (0, 0, 185), -1)
-
+        image = cv2.circle(
+            image,
+            point,
+            5,
+            (0, 185, 118),
+            -1
+        )
 
     cv2.imshow("image", image)
 
@@ -96,6 +91,10 @@ while True:
 
     if ret == ord('q'):
         break
+    elif ret == ord('r'):
+        tracker.reset()
+        mask = None
+        box = None
 
 
 cv2.destroyAllWindows()

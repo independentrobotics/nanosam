@@ -15,8 +15,8 @@
 
 import PIL.Image
 import matplotlib.pyplot as plt
-from nanosam.utils.trt_pose import PoseDetector, pose_to_sam_points
-from nanosam.utils.predictor import Predictor
+from nanosam.trt_sam.trt_pose import PoseDetector, pose_to_sam_points
+from nanosam.trt_sam.predictor import Predictor
 
 def get_torso_points(pose):
     return pose_to_sam_points(

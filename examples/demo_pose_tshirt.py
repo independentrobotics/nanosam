@@ -17,8 +17,8 @@ import PIL.Image
 import cv2
 import numpy as np
 import argparse
-from nanosam.utils.predictor import Predictor
-from nanosam.utils.trt_pose import PoseDetector, pose_to_sam_points
+from nanosam.trt_sam.predictor import Predictor
+from nanosam.trt_sam.trt_pose import PoseDetector, pose_to_sam_points
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")

@@ -24,7 +24,7 @@ import trt_pose.models
 import matplotlib.pyplot as plt
 from trt_pose.draw_objects import DrawObjects
 from trt_pose.parse_objects import ParseObjects
-from nanosam.utils.predictor import Predictor
+from nanosam.trt_sam.predictor import Predictor
 
 class PoseDetector(object):
 

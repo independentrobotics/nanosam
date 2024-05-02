@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
 import argparse
-from nanosam.utils.predictor import Predictor
+from nanosam.trt_sam.predictor import Predictor
 
 
 def predict_box(predictor, image, box, set_image=True):

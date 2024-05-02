@@ -17,8 +17,8 @@ import PIL.Image
 import cv2
 import numpy as np
 import argparse
-from nanosam.utils.predictor import Predictor
-from nanosam.utils.tracker import Tracker
+from nanosam.trt_sam.predictor import Predictor
+from nanosam.trt_sam.tracker import Tracker
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")

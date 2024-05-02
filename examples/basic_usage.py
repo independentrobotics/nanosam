@@ -17,7 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PIL.Image
 import argparse
-from nanosam.utils.predictor import Predictor
+from nanosam.trt_sam.predictor import Predictor
 
 
 if __name__ == "__main__":

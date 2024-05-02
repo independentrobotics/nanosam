@@ -17,8 +17,8 @@ import PIL.Image
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-from nanosam.utils.owlvit import OwlVit
-from nanosam.utils.predictor import Predictor
+from nanosam.trt_sam.owlvit import OwlVit
+from nanosam.trt_sam.predictor import Predictor
 
 
 if __name__ == "__main__":

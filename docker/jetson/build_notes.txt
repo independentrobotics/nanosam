@@ -1,0 +1,8 @@
+To build on a Jetson, at least with current Jetpack version, 
+you need to export DOCKER_BUILDKIT=0 to turn off the Docker buildkit, because
+it somehow disables the Nvidia Container Toolkit and makes it impossible for the 
+container to access CUDA, TensorRT, etc. 
+
+When building on a Jetson device with less than 16GB of video memory, 
+you're going to need to set up a swap file, or the conversion of ONXX
+models into TensorRT Engines will fail, somewhat silently. 

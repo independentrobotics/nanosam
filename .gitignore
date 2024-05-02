@@ -7,3 +7,9 @@ data
 **.egg-info
 *.onnx
 .hypothesis
+.cache
+.config/
+.local
+.nv
+.bash_history
+.python_history

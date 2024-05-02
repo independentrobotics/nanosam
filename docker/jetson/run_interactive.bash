@@ -1,1 +1,1 @@
-docker run -it --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm  ros-nanosam:latest /bin/bash
+docker run -it --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm  -v /home/aqua/workspaces/shared_ws/src/nanosam/:/root/ ros-nanosam:latest /bin/bash

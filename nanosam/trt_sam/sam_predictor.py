@@ -191,6 +191,10 @@ class SAMPredictor(object):
         if iterations != 1 or iou_thresh != 0.5:
             raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
         
+        # Cast to array if it hasn't already been done.
+        points = np.array(points)
+        point_labels = np.array(point_labels)
+        
         refine_mask = None
         for k in range(iterations):
             mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)

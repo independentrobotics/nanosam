@@ -17,7 +17,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import PIL.Image
 import argparse
-from nanosam.nanosam.trt_sam.sam_predictor import SAMPredictor
+from nanosam.trt_sam.sam_predictor import SAMPredictor
 
 if __name__ == "__main__":
 
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")
     parser.add_argument("--mask_decoder", type=str, default="data/mobile_sam_mask_decoder.engine")
     args = parser.parse_args()
-        
+
     # Instantiate TensorRT predictor
     predictor = SAMPredictor(
         args.image_encoder,

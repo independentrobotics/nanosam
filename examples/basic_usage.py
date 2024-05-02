@@ -33,32 +33,32 @@ if __name__ == "__main__":
         args.mask_decoder
     )
 
-    # Read image and run image encoder
-    image = PIL.Image.open("assets/dogs.jpg")
-    predictor.set_image(image)
+    # # Read image and run image encoder
+    # image = PIL.Image.open("assets/dogs.jpg")
+    # predictor.set_image(image)
 
-    # Segment using points.
+    # # Segment using points.
 
-    points = [[90.0, 90.0], [150.0, 150.0]]
-    point_labels = [0,1]
+    # points = [[90.0, 90.0], [150.0, 150.0]]
+    # point_labels = [0,1]
 
-    mask = predictor.predict_points(points, point_labels)
+    # mask = predictor.predict_points(points, point_labels)
 
-    # Draw results
-    plt.imshow(image)
-    plt.imshow(mask, alpha=0.5)
+    # # Draw results
+    # plt.imshow(image)
+    # plt.imshow(mask, alpha=0.5)
 
-    pts = np.array(points)
-    lbs = np.array(point_labels)
-    x = pts[lbs==0, 0]
-    y = pts[lbs==0, 1]
-    plt.plot(x, y, 'ro')
+    # pts = np.array(points)
+    # lbs = np.array(point_labels)
+    # x = pts[lbs==0, 0]
+    # y = pts[lbs==0, 1]
+    # plt.plot(x, y, 'ro')
 
-    x = pts[lbs==1, 0]
-    y = pts[lbs==1, 1]
-    plt.plot(x, y, 'bo')
+    # x = pts[lbs==1, 0]
+    # y = pts[lbs==1, 1]
+    # plt.plot(x, y, 'bo')
 
-    plt.savefig("data/basic_usage_points_out.jpg")
+    # plt.savefig("data/basic_usage_points_out.jpg")
 
     # Segment using bounding box
     bbox = [100, 100, 850, 759]  # x0, y0, x1, y1

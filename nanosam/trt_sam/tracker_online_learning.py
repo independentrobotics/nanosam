@@ -15,7 +15,7 @@
 
 import torch
 import torch.nn.functional as F
-from .predictor import Predictor, upscale_mask
+from .sam_predictor import SAMPredictor, upscale_mask
 import numpy as np
 import PIL.Image
 import torch.nn as nn
@@ -95,7 +95,7 @@ class SelfAtt(nn.Module):
 class TrackerOnline(object):
 
     def __init__(self,
-            predictor: Predictor
+            predictor: SAMPredictor
         ):
         self.predictor = predictor
         self.target_mask = None
@@ -114,7 +114,7 @@ class TrackerOnline(object):
         if box is not None:
             points, point_labels = bbox2points(box)
 
-        mask_high, iou_pred, mask_raw = self.predictor.predict(points, point_labels, mask_input=mask_input)
+        mask_high, iou_pred, mask_raw = self.predictor.__predict(points, point_labels, mask_input=mask_input)
 
         idx = int(iou_pred.argmax())
         mask_raw = mask_raw[:, idx:idx+1, :, :]

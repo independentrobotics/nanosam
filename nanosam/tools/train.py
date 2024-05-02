@@ -16,7 +16,7 @@
 import tqdm
 import torch
 import argparse
-from nanosam.trt_sam.predictor import load_image_encoder_engine
+from nanosam.nanosam.trt_sam.sam_predictor import load_image_encoder_engine
 from nanosam.models import create_model, list_models
 from nanosam.datasets.image_folder import ImageFolder
 import os

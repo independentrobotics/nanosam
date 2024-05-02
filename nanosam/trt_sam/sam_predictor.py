@@ -136,7 +136,7 @@ def upscale_mask(mask, image_shape, size=256):
     return mask
 
 
-class Predictor(object):
+class SAMPredictor(object):
 
     def __init__(self,
             image_encoder_engine: str,
@@ -154,7 +154,7 @@ class Predictor(object):
         self.image_tensor = preprocess_image(image, self.image_encoder_size)
         self.features = self.image_encoder_engine(self.image_tensor)
 
-    def predict(self, points, point_labels, mask_input=None):
+    def __predict(self, points, point_labels, mask_input=None):
         points = preprocess_points(
             points, 
             (self.image.height, self.image.width),
@@ -174,3 +174,86 @@ class Predictor(object):
         )
 
         return hi_res_mask, mask_iou, low_res_mask
+    
+    # Predict a mask, based on a list of points labeled as either background (0) or 
+    # foreground (1). While you could pass in bounding box points labeled with 2 and 3,
+    # why would you do that? Use the nice predict_bbox function I made for you. 
+    # 
+    # Inputs:
+    #   - points: An ndarray of Nx2, where 2 values are x and y positions of points in the same coordinate frame as the image that was set.
+    #   - point_labels: An array of Nx1, where the 1 value is a point label (0 for background, 1 for foreground)
+    #   - iterations: The number of iterations to attempt mask refinement, if desired. 
+    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
+    # Outputs:
+    #   - Mask (high resolution mask from internal __predict function)
+    # 
+    def predict_points(self, points, point_labels, iterations=1, iou_thresh=0.5):
+        if iterations != 1 or iou_thresh != 0.5:
+            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+        
+        refine_mask = None
+        for k in range(iterations):
+            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+
+        return mask
+            
+
+    # Predict a mask, based on bounding box inputs. 
+    # 
+    # Inputs:
+    #   - boxes: An 1x4 array, where the values of the rows are x1 y1 x2 y2, with (x1,y1) being the 
+    #            top left point and (x2,y2) being the bottom right point. 
+    #   - iterations: The number of iterations to attempt mask refinement, if desired. 
+    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
+    # Outputs:
+    #   - Mask (high resolution mask from internal __predict function)
+    # 
+    def predict_bbox(self, bbox, iterations=1, iou_thresh=0.5):
+        if iterations != 1 or iou_thresh != 0.5:
+            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+        
+        points = np.array([
+            [bbox[0], bbox[1]],
+            [bbox[2], bbox[3]]
+        ])
+        # Top left and bottom right points.
+        point_labels = np.array([2, 3])
+        
+        refine_mask = None
+        for k in range(iterations):
+            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+
+        mask = (mask[0, 0] > 0).detach().cpu().numpy()
+        return mask
+
+    # Predict a mask, based on an input mask.
+    # 
+    # Inputs:
+    #   - mask: A NxM ndarray, of the same size as the set image, with 0 representing noninclusion and 1 representing inclusion.
+    #   - iterations: The number of iterations to attempt mask refinement, if desired. 
+    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
+    # Outputs:
+    #   - Mask (high resolution mask from internal __predict function)
+    # 
+    def predict_mask(self, mask, iterations=1, iou_thresh=0.5):
+        if iterations != 1 or iou_thresh != 0.5:
+            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+        
+        refine_mask = None
+        for k in range(iterations):
+            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+
+    # Predict a mask, based on an input prompt. 
+    # DO NOT USE THIS IF YOU WANT FINELY TAILORED OWL PROMPTING.
+    # This is for quick, dirty, and easy prompt-driven SAM operations. If you want things like tree-organized prompts, 
+    # image prompting, etc, use nano_owl and then bring the outputs from that into nano_sam.
+    # 
+    # Inputs:
+    #   - prompt: A plaintext string of a prompt to OWL-Vit for 
+    #   - iterations: The number of iterations to attempt mask refinement, if desired. 
+    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
+    # Outputs:
+    #   - Mask (high resolution mask from internal __predict function)
+    # 
+    def predict_prompt(self, prompt, iteractions=1, iou_thresh=0.5):
+        raise NotImplementedError("Internal OWL prompting is not yet implemented, sorry.")

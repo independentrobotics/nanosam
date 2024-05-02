@@ -22,9 +22,7 @@ from transformers import (
 )
 from typing import Sequence, List, Tuple
 
-
-
-class OwlVit(object):
+class OwlVitPredictor(object):
     def __init__(self, threshold=0.1):
         self.processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32")
         self.model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")

@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tqdm
 import argparse
-from nanosam.trt_sam.predictor import Predictor
+from nanosam.nanosam.trt_sam.sam_predictor import SAMPredictor
 
 
 def predict_box(predictor, image, box, set_image=True):
@@ -76,7 +76,7 @@ if __name__ == "__main__":
         annFile=args.coco_ann
     )
 
-    predictor = Predictor(
+    predictor = SAMPredictor(
         image_encoder_engine=args.image_encoder,
         mask_decoder_engine=args.mask_decoder,
         image_encoder_size=1024

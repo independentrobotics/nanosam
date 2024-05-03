@@ -20,6 +20,7 @@ import PIL.Image
 import torch
 import numpy as np
 import torch.nn.functional as F
+import time
 
 def load_mask_decoder_engine(path: str):
     
@@ -144,6 +145,7 @@ class SAMPredictor(object):
             image_encoder_size: int = 1024,
             orig_image_encoder_size: int = 1024,
         ):
+        self.image = None
         self.image_encoder_engine = load_image_encoder_engine(image_encoder_engine)
         self.mask_decoder_engine = load_mask_decoder_engine(mask_decoder_engine)
         self.image_encoder_size = image_encoder_size
@@ -154,7 +156,9 @@ class SAMPredictor(object):
         self.image_tensor = preprocess_image(image, self.image_encoder_size)
         self.features = self.image_encoder_engine(self.image_tensor)
 
-    def __predict(self, points, point_labels, mask_input=None):
+    def __predict(self, points, point_labels, mask_input=None, skip_upscale=False):
+        if self.image is None:
+            raise ValueError("You need to set an image to the predictor using set_image() first.")
         points = preprocess_points(
             points, 
             (self.image.height, self.image.width),
@@ -168,12 +172,14 @@ class SAMPredictor(object):
             mask_input
         )
 
-        hi_res_mask = upscale_mask(
-            low_res_mask, 
-            (self.image.height, self.image.width)                           
-        )
-
-        return hi_res_mask, mask_iou, low_res_mask
+        if skip_upscale:
+            return None, mask_iou, low_res_mask
+        else:
+            hi_res_mask = upscale_mask(
+                low_res_mask, 
+                (self.image.height, self.image.width)                           
+            )
+            return hi_res_mask, mask_iou, low_res_mask
     
     # Predict a mask, based on a list of points labeled as either background (0) or 
     # foreground (1). While you could pass in bounding box points labeled with 2 and 3,
@@ -183,22 +189,41 @@ class SAMPredictor(object):
     #   - points: An ndarray of Nx2, where 2 values are x and y positions of points in the same coordinate frame as the image that was set.
     #   - point_labels: An array of Nx1, where the 1 value is a point label (0 for background, 1 for foreground)
     #   - iterations: The number of iterations to attempt mask refinement, if desired. 
-    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
     # Outputs:
     #   - Mask (high resolution mask from internal __predict function)
     # 
-    def predict_points(self, points, point_labels, iterations=1, iou_thresh=0.5):
-        if iterations != 1 or iou_thresh != 0.5:
-            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+    def predict_points(self, foreground, background=None, iterations=1):
+        if iterations < 1:
+            raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         
-        # Cast to array if it hasn't already been done.
-        points = np.array(points)
-        point_labels = np.array(point_labels)
-        
+        if foreground is None or len(foreground) < 1:
+            raise ValueError("You must pass in foreground points.")
+
+        if background is None or len(background) < 1:
+            # Create labels of points
+            fg_labs = [1] * len(foreground)
+
+            # Cast to array if it hasn't already been done.
+            points = np.array(foreground, dtype=np.float32)
+            point_labels = np.array(fg_labs, dtype=np.float32)
+        else:
+            # Create labels of points
+            fg_labs = [1] * len(foreground)
+            bg_labs = [0] * len(background)
+
+            # Cast to array if it hasn't already been done.
+            points = np.array(np.concatenate((foreground, background)), dtype=np.float32)
+            point_labels = np.array(np.concatenate((fg_labs, bg_labs)), dtype=np.float32)
+
         refine_mask = None
         for k in range(iterations):
-            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+            if (iterations - k) > 1:
+                _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
+            else:
+                mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
+
+        mask = (mask[0, 0] > 0).detach().cpu().numpy()
         return mask
             
 
@@ -208,24 +233,26 @@ class SAMPredictor(object):
     #   - boxes: An 1x4 array, where the values of the rows are x1 y1 x2 y2, with (x1,y1) being the 
     #            top left point and (x2,y2) being the bottom right point. 
     #   - iterations: The number of iterations to attempt mask refinement, if desired. 
-    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
     # Outputs:
     #   - Mask (high resolution mask from internal __predict function)
     # 
-    def predict_bbox(self, bbox, iterations=1, iou_thresh=0.5):
-        if iterations != 1 or iou_thresh != 0.5:
-            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+    def predict_bbox(self, top_left, bot_right, iterations=1):
+        if iterations < 1:
+            raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         
         points = np.array([
-            [bbox[0], bbox[1]],
-            [bbox[2], bbox[3]]
+            [top_left[0], top_left[1]],
+            [bot_right[0], bot_right[1]]
         ])
         # Top left and bottom right points.
         point_labels = np.array([2, 3])
         
         refine_mask = None
         for k in range(iterations):
-            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+            if (iterations - k) > 1:
+                _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
+            else:
+                mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
         mask = (mask[0, 0] > 0).detach().cpu().numpy()
         return mask
@@ -235,17 +262,23 @@ class SAMPredictor(object):
     # Inputs:
     #   - mask: A NxM ndarray, of the same size as the set image, with 0 representing noninclusion and 1 representing inclusion.
     #   - iterations: The number of iterations to attempt mask refinement, if desired. 
-    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
     # Outputs:
     #   - Mask (high resolution mask from internal __predict function)
     # 
-    def predict_mask(self, mask, iterations=1, iou_thresh=0.5):
-        if iterations != 1 or iou_thresh != 0.5:
-            raise NotImplementedError("Sorry, multiple iterations of prediction are not yet supported.")
+    def predict_mask(self, mask, iterations=1):
+        if iterations < 1:
+            raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
+        
+        points = np.array()
+        point_labels = np.array()
+
         
         refine_mask = None
         for k in range(iterations):
-            mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+            if (iterations - k) > 1:
+                _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
+            else:
+                mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
     # Predict a mask, based on an input prompt. 
     # DO NOT USE THIS IF YOU WANT FINELY TAILORED OWL PROMPTING.

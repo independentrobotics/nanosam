@@ -16,6 +16,7 @@
 import numpy as np
 import cv2 
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import PIL.Image
 import argparse
 
@@ -23,8 +24,8 @@ from nanosam.trt_sam.sam_predictor import SAMPredictor
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")
-    parser.add_argument("--mask_decoder", type=str, default="data/mobile_sam_mask_decoder.engine")
+    parser.add_argument("--image_encoder", type=str, default="../data/resnet18_image_encoder.engine")
+    parser.add_argument("--mask_decoder", type=str, default="../data/mobile_sam_mask_decoder.engine")
     args = parser.parse_args()
         
     # Instantiate TensorRT predictor
@@ -33,45 +34,57 @@ if __name__ == "__main__":
         args.mask_decoder
     )
 
-    # # Read image and run image encoder
-    # image = PIL.Image.open("assets/dogs.jpg")
-    # predictor.set_image(image)
+    # Read image and run image encoder
+    image = PIL.Image.open("../assets/dogs.jpg")
+    predictor.set_image(image)
 
     # # Segment using points.
 
-    # points = [[90.0, 90.0], [150.0, 150.0]]
-    # point_labels = [0,1]
-
-    # mask = predictor.predict_points(points, point_labels)
-
-    # # Draw results
-    # plt.imshow(image)
-    # plt.imshow(mask, alpha=0.5)
-
-    # pts = np.array(points)
-    # lbs = np.array(point_labels)
-    # x = pts[lbs==0, 0]
-    # y = pts[lbs==0, 1]
-    # plt.plot(x, y, 'ro')
-
-    # x = pts[lbs==1, 0]
-    # y = pts[lbs==1, 1]
-    # plt.plot(x, y, 'bo')
-
-    # plt.savefig("data/basic_usage_points_out.jpg")
-
-    # Segment using bounding box
-    bbox = [100, 100, 850, 759]  # x0, y0, x1, y1
-
-    mask = predictor.predict_bbox(bbox)
-    mask = (mask[0, 0] > 0).detach().cpu().numpy()
+    fg_points = [[225, 225], [400,400], [650,350], [350,650]]
+    bg_points = [[700, 150]]
+    
+    mask = predictor.predict_points(fg_points, bg_points, iterations=2)
 
     # Draw results
+    plt.clf()
     plt.imshow(image)
     plt.imshow(mask, alpha=0.5)
+
+    # I'm just doing this for easier slicing
+    fg_points = np.array(fg_points)
+    bg_points = np.array(bg_points)
+
+    x = fg_points[:, 0]
+    y = fg_points[:, 1]
+    plt.plot(x, y, 'bo')
+
+    x = bg_points[:, 0]
+    y = bg_points[:, 1]
+    plt.plot(x, y, 'ro')
+
+    plt.savefig(f"/out/basic_usage_points_out.jpg")
+
+    # Segment using bounding box
+    tl = [850, 759]  # x0, y0, x1, y1
+    br = [850,759]
+
+    mask = predictor.predict_bbox(tl, br)
+
+    # Draw results
+    plt.clf()
+    
+    plt.imshow(image)
+    plt.imshow(mask, alpha=0.5)
+
+    # HACK So this is really dumb, but for some reason I can't figure out
+    # the version I wrote to draw the rectangle from th tl/br variables just...
+    # doesn't show up on the saved image? Not sure why. 
+    bbox = [100, 100, 850, 759]  # x0, y0, x1, y1
     x = [bbox[0], bbox[2], bbox[2], bbox[0], bbox[0]]
     y = [bbox[1], bbox[1], bbox[3], bbox[3], bbox[1]]
-    plt.plot(x, y, 'g-')
-    plt.savefig("data/basic_usage_bbox_out.jpg")
+    plt.plot(x, y, 'y-')
+    plt.savefig("/out/basic_usage_bbox_out.jpg")
 
     # Segment using mask (here provided by an opencv color threshold.)
+
+

@@ -22,8 +22,8 @@ from nanosam.trt_sam.sam_predictor import SAMPredictor
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--image_encoder", type=str, default="data/resnet18_image_encoder.engine")
-    parser.add_argument("--mask_decoder", type=str, default="data/mobile_sam_mask_decoder.engine")
+    parser.add_argument("--image_encoder", type=str, default="../data/resnet18_image_encoder.engine")
+    parser.add_argument("--mask_decoder", type=str, default="../data/mobile_sam_mask_decoder.engine")
     args = parser.parse_args()
 
     # Instantiate TensorRT predictor

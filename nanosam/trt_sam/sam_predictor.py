@@ -22,6 +22,9 @@ import numpy as np
 import torch.nn.functional as F
 import time
 
+import cv2
+import matplotlib.pyplot as plt
+
 def load_mask_decoder_engine(path: str):
     
     with trt.Logger() as logger, trt.Runtime(logger) as runtime:
@@ -94,6 +97,28 @@ def preprocess_points(points, image_size, size: int = 1024):
     scale = size / max(*image_size)
     points = points * scale
     return points
+
+def preprocess_mask(mask, image_size, size = 256):
+    # Resize and pad mask
+    height, width = image_size
+    aspect_ratio = width / height
+
+    if aspect_ratio >= 1:
+        resize_width = size
+        resize_height = int(size / aspect_ratio)
+    else:
+        resize_height = size
+        resize_width = int(size * aspect_ratio)
+
+    resized = cv2.resize(mask, (resize_width, resize_height))
+    padded = np.zeros((256, 256))
+    padded[0:resize_height, 0:resize_width] = resized
+    
+    # Set to floats and convert to tensor
+    floated = np.array(padded, dtype=np.float32)
+    tens = torch.torch.from_numpy(floated).cuda()
+
+    return tens
 
 
 def run_mask_decoder(mask_decoder_engine, features, points=None, point_labels=None, mask_input=None):
@@ -219,6 +244,7 @@ class SAMPredictor(object):
         for k in range(iterations):
             if (iterations - k) > 1:
                 _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
+
             else:
                 mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
@@ -269,16 +295,20 @@ class SAMPredictor(object):
         if iterations < 1:
             raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         
-        points = np.array()
-        point_labels = np.array()
-
+        points = np.array([[0,0]])
+        point_labels = np.array([0])
+        mask = preprocess_mask(mask,  (self.image.height, self.image.width))
         
-        refine_mask = None
+        refine_mask = mask
         for k in range(iterations):
             if (iterations - k) > 1:
                 _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
             else:
                 mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
+                
+        mask = (mask[0, 0] > 0).detach().cpu().numpy()
+        return mask
+    
 
     # Predict a mask, based on an input prompt. 
     # DO NOT USE THIS IF YOU WANT FINELY TAILORED OWL PROMPTING.
@@ -294,3 +324,4 @@ class SAMPredictor(object):
     # 
     def predict_prompt(self, prompt, iteractions=1, iou_thresh=0.5):
         raise NotImplementedError("Internal OWL prompting is not yet implemented, sorry.")
+    

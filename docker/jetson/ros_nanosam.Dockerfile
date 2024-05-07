@@ -60,6 +60,9 @@ WORKDIR /opt
 # Install Python dependencies for NanoSAM
 run pip3 install transformers timm matplotlib gdown
 RUN pip3 install git+https://github.com/openai/CLIP.git
+RUN python3 -c "from transformers import (OwlViTProcessor, OwlViTForObjectDetection); \
+                OwlViTProcessor.from_pretrained(\"google/owlvit-base-patch32\");  \
+                OwlViTForObjectDetection.from_pretrained(\"google/owlvit-base-patch32\");"
 
 # Install Torch2TRT
 RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt && \

@@ -25,6 +25,9 @@ import time
 import cv2
 import matplotlib.pyplot as plt
 
+from .owlvit_predictor import OwlVitPredictor
+from .utils import calc_bounding
+
 def load_mask_decoder_engine(path: str):
     
     with trt.Logger() as logger, trt.Runtime(logger) as runtime:
@@ -243,14 +246,15 @@ class SAMPredictor(object):
         refine_mask = None
         for k in range(iterations):
             if (iterations - k) > 1:
-                _, iou, refine_mask = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
-
+                _, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask, skip_upscale=True)
+                refine_mask = logits[0]
             else:
                 mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
 
         mask = (mask[0, 0] > 0).detach().cpu().numpy()
-        return mask
+        box = calc_bounding(mask)
+        return [box], [mask]
             
 
     # Predict a mask, based on bounding box inputs. 
@@ -281,7 +285,8 @@ class SAMPredictor(object):
                 mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
 
         mask = (mask[0, 0] > 0).detach().cpu().numpy()
-        return mask
+        box = calc_bounding(mask)
+        return [box], [mask]
 
     # Predict a mask, based on an input mask.
     # 
@@ -295,8 +300,10 @@ class SAMPredictor(object):
         if iterations < 1:
             raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         
-        points = np.array([[0,0]])
-        point_labels = np.array([0])
+        # Select 10 random points of background
+        points = np.array([[0,0]], dtype=np.float32)
+        point_labels = np.array([0], dtype=np.float32)
+
         mask = preprocess_mask(mask,  (self.image.height, self.image.width))
         
         refine_mask = mask
@@ -307,7 +314,8 @@ class SAMPredictor(object):
                 mask, iou, logits = self.__predict(points, point_labels, mask_input=refine_mask)
                 
         mask = (mask[0, 0] > 0).detach().cpu().numpy()
-        return mask
+        box = calc_bounding(mask)
+        return [box], [mask]
     
 
     # Predict a mask, based on an input prompt. 
@@ -318,10 +326,28 @@ class SAMPredictor(object):
     # Inputs:
     #   - prompt: A plaintext string of a prompt to OWL-Vit for 
     #   - iterations: The number of iterations to attempt mask refinement, if desired. 
-    #   - iou_thresh: The IOU threshold to cut off mask refinement, if desired. 
     # Outputs:
     #   - Mask (high resolution mask from internal __predict function)
     # 
-    def predict_prompt(self, prompt, iteractions=1, iou_thresh=0.5):
-        raise NotImplementedError("Internal OWL prompting is not yet implemented, sorry.")
-    
+    def predict_prompt(self, prompt, iterations=1):
+        if iterations < 1:
+            raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
+        
+        detector = OwlVitPredictor(0.1)
+        detections = detector.predict(self.image, texts=prompt)
+
+        masks = []
+        boxes = []
+        for d in detections:
+            xmin, ymin, xmax, ymax = d['bbox']
+            xmin = int(xmin)
+            ymin = int(ymin)
+            xmax = int(xmax)
+            ymax = int(ymax)
+
+            boxes.append([xmin, ymin, xmax, ymax])
+            _, m = self.predict_bbox([xmin, ymin], [xmax, ymax])
+            masks.extend(m)
+
+        return boxes, masks
+        

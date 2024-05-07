@@ -26,7 +26,7 @@ import cv2
 import matplotlib.pyplot as plt
 
 from .owlvit_predictor import OwlVitPredictor
-from .utils import calc_bounding
+from .utils import calc_bounding, prune_owl_detections
 
 def load_mask_decoder_engine(path: str):
     
@@ -334,7 +334,8 @@ class SAMPredictor(object):
             raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         
         detector = OwlVitPredictor(0.1)
-        detections = detector.predict(self.image, texts=prompt)
+        detections = detector.predict(self.image, texts=[prompt])
+        detections = prune_owl_detections(detections)
 
         masks = []
         boxes = []

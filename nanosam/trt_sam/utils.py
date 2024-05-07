@@ -6,6 +6,49 @@ def calc_bounding(mask):
     x,y = np.where(mask == True)
     return [np.min(x), np.min(y), np.max(x), np.max(y)]
 
+def box_area(box):
+    w = box[2] - box[0]
+    l = box[3] - box[1]
+    return w * l
+
+def box_contained(meta, box):
+    mx1, my1, mx2, my2 = meta
+    bx1, by1, bx2, by2 = box
+    return (bx1 > mx1) and ( by1 > my1) and (bx2 < mx2) and (by2 < my2)
+
+
+def prune_owl_detections(detections, max_detections=5):
+    # Filter by max scores
+    if len(detections) < max_detections:
+        filtered = detections
+    else: 
+        scores = np.array([d['score'] for d in detections])
+        ind = np.argpartition(scores, -max_detections)[-max_detections:]
+        filtered = [detections[i] for i in ind]
+
+    # Filter out the largest bounding box if it  fully contain all others.
+    areas = [box_area(d['bbox']) for d in filtered]
+    
+    # KLUDGE 
+    if (len(areas) == 0):
+        return detections
+
+    ind_max = areas.index(max(areas))
+
+    check = True 
+    max_box = filtered[ind_max]
+    for k, d in enumerate(filtered):
+        if k == ind_max:
+            continue
+        
+        check = check and box_contained(max_box['bbox'], d['bbox'])
+
+    if check:
+        del filtered[ind_max]
+
+    return filtered
+
+
 def random_color():
     c = np.random.choice(range(256), size=3)
     return (int(c[0]), int(c[1]), int(c[2]))
@@ -14,8 +57,8 @@ def mpl_color(k):
     cmap = [[200,0,0], [0,200,0], [0,0,200], [100,100,0], [100,0,100], 
             [0,100,100], [100,100,100], [50,50,0], [0,50,50], [50,0,50], 
             [50,50,50]]
-    if k > len(cmap):
-        return random_color
+    if k >= len(cmap):
+        return random_color()
     else:
         return cmap[k]
 

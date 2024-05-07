@@ -346,7 +346,7 @@ class SAMPredictor(object):
             ymax = int(ymax)
 
             boxes.append([xmin, ymin, xmax, ymax])
-            _, m = self.predict_bbox([xmin, ymin], [xmax, ymax])
+            _, m = self.predict_bbox([xmin, ymin], [xmax, ymax], iterations=iterations)
             masks.extend(m)
 
         return boxes, masks

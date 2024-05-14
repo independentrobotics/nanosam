@@ -58,7 +58,7 @@ RUN python3 -m pip install pyserial transforms3d pyubx2 colcon-common-extensions
 WORKDIR /opt
 
 # Install Python dependencies for NanoSAM
-run pip3 install transformers timm matplotlib gdown
+RUN pip3 install transformers timm matplotlib gdown
 RUN pip3 install git+https://github.com/openai/CLIP.git
 RUN python3 -c "from transformers import (OwlViTProcessor, OwlViTForObjectDetection); \
                 OwlViTProcessor.from_pretrained(\"google/owlvit-base-patch32\");  \

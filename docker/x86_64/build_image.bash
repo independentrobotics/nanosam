@@ -1,0 +1,1 @@
+docker build -t nanosam -f ./ros_nanosam.Dockerfile $1

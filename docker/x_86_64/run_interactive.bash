@@ -1,1 +1,0 @@
-docker run -it --gpus all --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm nanosam:latest /bin/bash

@@ -37,11 +37,10 @@ RUN python3 -m pip install transformers timm matplotlib gdown wget
 RUN python3 -m pip install git+https://github.com/openai/CLIP.git
 
 # Install the NanoSAM Python package
-RUN git clone https://github.com/independentrobotics/nanosam && \
+RUN git clone https://github.com/independentrobotics/nanosam.git && \
     cd nanosam && \
     python3 setup.py install
 
-
-RUN git clone https://github.com/independentrobotics/ir_utils && \
-    cd ir_utils && \
-    RUN pip3 install .
+COPY ir_utils /root/ir_utils
+RUN cd ir_utils && \
+    pip3 install .

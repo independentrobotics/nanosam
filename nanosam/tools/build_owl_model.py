@@ -21,3 +21,5 @@ def download_owl_model():
     OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32", cache_dir=model_path)
 
 
+if __name__ == "__main__":
+    setup()

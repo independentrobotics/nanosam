@@ -69,3 +69,6 @@ def create_mask_decoder_engine(model_path):
 
     command = ' '.join(base_command, onnx, engine, shapes)
     subprocess.run(command,shell=True)
+
+if __name__ == "__main__":
+    setup()

@@ -6,42 +6,42 @@ SHELL ["/bin/bash", "-c"]
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
-ENV PYTHONWARNINGS="ignore:setup.py install is deprecated::setuptools.command.install"
+# ENV PYTHONWARNINGS="ignore:setup.py install is deprecated:p:setuptools.command.install"
 
 RUN apt update
 RUN apt upgrade -y
 RUN apt install -y python3 python3-pip
-RUN apt-get install -y curl wget
-RUN apt-get install -y build-essential
+RUN apt-get install -y curl wget git build-essential
 RUN apt-get install -y libboost-all-dev
 RUN apt-get install -y libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libgstreamer-plugins-bad1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-x gstreamer1.0-alsa gstreamer1.0-gl gstreamer1.0-gtk3 gstreamer1.0-qt5 gstreamer1.0-pulseaudio ffmpeg
 RUN pip install opencv-python
 
-# This tests to make sure that nvidia-container-toolkit libraries will be available.
-# If it fails, make sure that DOCKER_TOOLKIT=0 is set in your environment variables for
-# The build, or check the status of the bug that was causing this before
-# https://stackoverflow.com/a/75629058
-RUN python3 -c "import tensorrt; print(tensorrt.__version__)"
+# NanoSAM setup
+WORKDIR /root
 
-# NanoSAM/NanoOWL setup
-WORKDIR /opt
+# Install PyTorch
+RUN python3 -m pip install torch torchvision
+
+# Install Tensorrt
+RUN python3 -m pip install --pre --upgrade tensorrt
+RUN apt-get install -y libnvinfer-bin
 
 # Install Torch2TRT
 RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt && \
     cd torch2trt && \
-    pip3 install .
+    python3 -m pip install -r requirements/requirements_10.txt && \
+    python3 -m pip install .
 
 # Install Python dependencies for NanoSAM
-RUN pip3 install transformers timm matplotlib gdown wget
-RUN pip3 install git+https://github.com/openai/CLIP.git
+RUN python3 -m pip install transformers timm matplotlib gdown wget
+RUN python3 -m pip install git+https://github.com/openai/CLIP.git
 
 # Install the NanoSAM Python package
 RUN git clone https://github.com/independentrobotics/nanosam && \
     cd nanosam && \
-    pip3 install .
+    python3 setup.py install
 
-COPY /ir_utils /root/ir_utils
-WORKDIR /root/ir_utils
-RUN pip3 install .
 
-WORKDIR /root
+RUN git clone https://github.com/independentrobotics/ir_utils && \
+    cd ir_utils && \
+    RUN pip3 install .

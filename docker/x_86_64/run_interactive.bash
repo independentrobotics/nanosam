@@ -1,1 +1,1 @@
-docker run -it --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm ros-nanosam:latest /bin/bash
+docker run -it --gpus all --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm nanosam:latest /bin/bash

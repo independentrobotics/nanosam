@@ -18,7 +18,8 @@ from setuptools import find_packages, setup
 
 setup(
     name="nanosam",
-    version="0.0",
+    version="0.1",
     install_requires=[],
     packages=find_packages()
 )
+    

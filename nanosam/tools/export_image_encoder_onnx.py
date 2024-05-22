@@ -15,7 +15,8 @@
 
 
 import torch
-from nanosam.models import create_model
+from torchvision.models import resnet18
+from nanosam.nanosam.models import create_model
 import argparse
 
 
@@ -27,10 +28,6 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--model_name", type=str, default="resnet18"
-    )
-
-    parser.add_argument(
-        "--checkpoint", type=str, required=True, help="The path to the SAM model checkpoint."
     )
 
     parser.add_argument(
@@ -56,8 +53,7 @@ if __name__ == "__main__":
 
         model = create_model(args.model_name)
         data = torch.randn(1, 3, args.input_size, args.input_size).to(device)
-        model.load_state_dict(torch.load(args.checkpoint)["model"])
-        model = model.cuda().eval()
+        model = resnet18().cuda().eval()
 
         torch.onnx.export(
             model,

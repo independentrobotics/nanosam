@@ -4,6 +4,10 @@ from matplotlib import colormaps
 
 def calc_bounding(mask):
     x,y = np.where(mask == True)
+    print(x,y)
+    if len(x) < 1 or len(y) < 1:
+        return []
+        
     return [np.min(x), np.min(y), np.max(x), np.max(y)]
 
 def box_area(box):

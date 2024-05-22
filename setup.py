@@ -18,8 +18,13 @@ from setuptools import find_packages, setup
 
 setup(
     name="nanosam",
-    version="0.1",
+    version="1.0",
+    description="A distilled Segment Anything model variant capable of running in real-time on NVIDIA Jetson platforms with TensorRT.",
+    author="Originally authored by NVIDIA, modifications made by Independent Robotics.",
+    maintainer="Michael Fulton",
+    maintainer_email="michael.fulton@independentrobotics.com",
+    license="Apache 2.0",
     install_requires=[],
-    packages=find_packages()
+    packages=find_packages(),
 )
     

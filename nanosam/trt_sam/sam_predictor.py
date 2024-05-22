@@ -25,8 +25,11 @@ import time
 import cv2
 import matplotlib.pyplot as plt
 
+from .build_trt_engines import build_engines
 from .owlvit_predictor import OwlVitPredictor
 from .utils import calc_bounding, prune_owl_detections
+
+from ir_utils.filesystem_tools import get_dl_model_directory
 
 def load_mask_decoder_engine(path: str):
     
@@ -168,11 +171,18 @@ def upscale_mask(mask, image_shape, size=256):
 class SAMPredictor(object):
 
     def __init__(self,
-            image_encoder_engine: str,
-            mask_decoder_engine: str,
             image_encoder_size: int = 1024,
             orig_image_encoder_size: int = 1024,
         ):
+
+        # This function checks to see if TRT engines have already been built and stored in the 
+        # appropriate IR deep learning models folder. If not, it builds them.
+        build_engines()        
+
+        model_path = get_dl_model_directory("nanosam")
+        image_encoder_engine = model_path + 'resnet18_image_encoder.engine'
+        mask_decoder_engine = model_path + 'mobile_sam_mask_decoder.engine'
+
         self.image = None
         self.image_encoder_engine = load_image_encoder_engine(image_encoder_engine)
         self.mask_decoder_engine = load_mask_decoder_engine(mask_decoder_engine)

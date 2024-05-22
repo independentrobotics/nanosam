@@ -1,1 +1,1 @@
-docker run -it --gpus all --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm -v /home/aqua/.config/independent-robotics.yaml:/root/.config/independent-robotics.yaml -v /home/aqua/IndependentRobotics:/root/IndependentRobotics nanosam:latest /bin/bash
+docker run -it --gpus all --net=host --ipc=host --pid=host -v /dev/shm:/dev/shm -v /home/$USER/.config/independent-robotics.yaml:/root/.config/independent-robotics.yaml -v /home/$USER/IndependentRobotics:/root/IndependentRobotics nanosam:latest /bin/bash

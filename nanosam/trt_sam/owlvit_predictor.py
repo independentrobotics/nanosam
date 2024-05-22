@@ -21,11 +21,15 @@ from transformers import (
     OwlViTForObjectDetection
 )
 from typing import Sequence, List, Tuple
+from .build_owl_model import download_owl_model
+from ir_utils.filesystem_tools import get_dl_model_directory
 
 class OwlVitPredictor(object):
     def __init__(self, threshold=0.1):
-        self.processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32")
-        self.model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
+        download_owl_model()
+        model_path = get_dl_model_directory("nanosam-int-owl")
+        self.processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32", cache_dir=model_path)
+        self.model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32", cache_dir=model_path)
         self.threshold = threshold
 
     def predict(self, image: PIL.Image.Image, texts: Sequence[str]):

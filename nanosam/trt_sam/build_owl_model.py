@@ -8,18 +8,16 @@ from transformers import (
 )
 import os
 
-def setup():
-    download_owl_model()
-
 def download_owl_model():
     try:
         model_path = get_dl_model_directory("nanosam-int-owl")
     except ValueError:
         create_dl_model_directory("nanosam-int-owl")
+        model_path = get_dl_model_directory("nanosam-int-owl")
  
     OwlViTProcessor.from_pretrained("google/owlvit-base-patch32", cache_dir=model_path)
     OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32", cache_dir=model_path)
 
 
 if __name__ == "__main__":
-    setup()
+    download_owl_model()

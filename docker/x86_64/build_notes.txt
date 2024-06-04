@@ -1,6 +1,0 @@
-To build on a desktop/laptop system, follow these steps.
-
-0. Ensure that the Docker engine is installed and that the nvidia-container-toolkit is installed and configured.
-1. Run `./build_image.bash [path_to_folder_containing_ir_utils]`
-2. That's it! Note that if you don't have TRT engines for SAM already in your ir_utils directory, 
-your first launch of the Docker container will build these, as Docker cannot access the GPU during the build process.

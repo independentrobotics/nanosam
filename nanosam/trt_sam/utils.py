@@ -1,14 +1,25 @@
 import cv2
 import numpy as np
 from matplotlib import colormaps
+from matplotlib.colors import to_rgb
+from typing import List, Optional, overload
+import numpy.typing as npt
+from scipy.cluster.vq import kmeans
 
-def calc_bounding(mask):
-    x,y = np.where(mask == True)
-    print(x,y)
-    if len(x) < 1 or len(y) < 1:
+def calc_bounding(mask, padding=3):
+    x = np.where(np.any(mask == True, axis=0))[0]
+    y = np.where(np.any(mask == True, axis=1))[0]
+    if x.size == 0 or y.size == 0:
         return []
-        
-    return [np.min(x), np.min(y), np.max(x), np.max(y)]
+
+    
+    h,w = mask.shape
+    _, xmin, _ = sorted([0, np.min(x)-2, w])
+    _, ymin, _ = sorted([0, np.min(y)-2, h])
+    _, xmax, _ = sorted([0, np.max(x)+2, w])
+    _, ymax, _ = sorted([0, np.max(y)+2, h])
+    
+    return [xmin, ymin, xmax, ymax]
 
 def box_area(box):
     w = box[2] - box[0]
@@ -20,6 +31,12 @@ def box_contained(meta, box):
     bx1, by1, bx2, by2 = box
     return (bx1 > mx1) and ( by1 > my1) and (bx2 < mx2) and (by2 < my2)
 
+def calc_mask_candidates(mask, n_candidates=10):
+    obs = np.transpose(np.nonzero(mask)).astype(np.float32)
+    candidates, _ = kmeans(obs, n_candidates, iter=5)
+
+    return candidates.astype(np.int32)
+
 
 def prune_owl_detections(detections, max_detections=5):
     # Filter by max scores
@@ -30,25 +47,28 @@ def prune_owl_detections(detections, max_detections=5):
         ind = np.argpartition(scores, -max_detections)[-max_detections:]
         filtered = [detections[i] for i in ind]
 
-    # Filter out the largest bounding box if it  fully contain all others.
-    areas = [box_area(d['bbox']) for d in filtered]
-    
-    # KLUDGE 
-    if (len(areas) == 0):
-        return detections
-
-    ind_max = areas.index(max(areas))
-
-    check = True 
-    max_box = filtered[ind_max]
-    for k, d in enumerate(filtered):
-        if k == ind_max:
-            continue
+    # if, after max score filtering, we only have 1 detection left, no need for
+    # area-based filtering.
+    if len(filtered) > 1:
+        # Filter out the largest bounding box if it  fully contain all others.
+        areas = [box_area(d['bbox']) for d in filtered]
         
-        check = check and box_contained(max_box['bbox'], d['bbox'])
+        # KLUDGE 
+        if (len(areas) == 0):
+            return detections
 
-    if check:
-        del filtered[ind_max]
+        ind_max = areas.index(max(areas))
+
+        check = True 
+        max_box = filtered[ind_max]
+        for k, d in enumerate(filtered):
+            if k == ind_max:
+                continue
+            
+            check = check and box_contained(max_box['bbox'], d['bbox'])
+
+        if check:
+            del filtered[ind_max]
 
     return filtered
 
@@ -57,29 +77,85 @@ def random_color():
     c = np.random.choice(range(256), size=3)
     return (int(c[0]), int(c[1]), int(c[2]))
 
-def mpl_color(k):
-    cmap = [[200,0,0], [0,200,0], [0,0,200], [100,100,0], [100,0,100], 
-            [0,100,100], [100,100,100], [50,50,0], [0,50,50], [50,0,50], 
-            [50,50,50]]
-    if k >= len(cmap):
+def mpl_color(k, map='Dark2'):
+    cmap = colormaps[map]
+    if k >= cmap.N:
         return random_color()
     else:
-        return cmap[k]
+        return [int(c*256) for c in to_rgb(cmap(k))]
+    
+@overload
+def markup_image(
+    image:npt.NDArray[np.float_], 
+    masks:npt.NDArray[np.bool_],
+    boxes:List[int], 
+    ious:float,
+    labels:Optional[str]
+    ) -> npt.NDArray[np.float_]:
+    # Definition of @overload function is not used. 
+    ...
 
-def markup_image(image, labels, boxes, masks):
+@overload
+def markup_image(
+    image:npt.NDArray[np.float_],
+    masks:List[npt.NDArray[np.bool_]],
+    boxes: List[List[str]],
+    ious:List[float],
+    labels:Optional[List[str]]
+    )-> npt.NDArray[np.float_]:
+    # Definition of @overload function is not used. 
+    ...
+
+'''
+    Marks up an image using boxes, masks, and labels from SAM detections.
+
+    Inputs:
+        image: An OpenCV image (np.ndarray). 
+        boxes: A bbox (list of [x0,y0,x1,y1]) or list therof.
+        masks: A mask (np.ndarray of bools) or list therof.
+        labels: A string or list therof.
+    Outputs:
+        marked image: The image with the input detections marked on it.
+'''
+def markup_image(
+        image:npt.NDArray[np.float_],
+        masks:npt.NDArray[np.bool_] | List[npt.NDArray[np.bool_]],
+        boxes:List[int] | List[List[str]],
+        ious:float | List[float],
+        labels:Optional[str | List[str]]=None
+        )-> npt.NDArray[np.float_]:
+    
+    # Allow input as singles or lists.
+    if len(boxes) < 1 or not isinstance(boxes[0], list):
+        boxes = [boxes]
+    if not isinstance(masks, list):
+        masks = [masks]
+    if not isinstance(ious, list):
+        ious = [ious]
+    if isinstance(labels, str):
+        labels = [labels]
+    
+    # Check some basic things about input data.
     if labels is None or len(labels) < 1:
-        labels = [""] * len(masks)
+        labels = ["object"] * len(masks)
 
     if len(labels) != len(boxes) != len(masks):
         raise ValueError(f"Lengths of lists of masks({len(masks)}), boxes({len(boxes)}), and labels({len(labels)}) do not match. ")
 
-    running = image
-    for k, l, b, m in zip(range(len(masks)), labels, boxes, masks):
+    running_mask = np.zeros(image.shape, image.dtype)
+    running_bbox = np.zeros(image.shape, image.dtype)
+    
+    for k, m, b, i, l in sorted(zip(range(len(masks)), masks, boxes, ious, labels), key=lambda set:set[3]):
         c = mpl_color(k)
-        running = draw_mask(running, m, c, l)
-        running = draw_box(running, b, c, l)
+        running_mask = draw_mask(running_mask, m, c, l)
+        running_bbox = draw_box(running_bbox, b, c, i, l)
 
-    return running
+    image = cv2.addWeighted(running_mask, 0.85, image, 1, 0, image)
+    coords = np.nonzero(running_bbox)
+    image[coords[0], coords[1],:] = 0
+    image[coords] = running_bbox[coords]
+
+    return image
 
 
 def draw_mask(img, mask, color, label=None):
@@ -87,13 +163,17 @@ def draw_mask(img, mask, color, label=None):
     colorImg = np.zeros(img.shape, img.dtype)
     colorImg[:,:] = color
     colorMask = cv2.bitwise_and(colorImg, colorImg, mask=m)
-
-    image = cv2.addWeighted(colorMask, 0.5, img, 1, 0, img)
+    img = cv2.bitwise_or(img, colorMask)
     return img
 
-def draw_box(image, box, color, label=None):
+def draw_box(image, box, color, iou, label=None):
+    if len(box) < 1:
+        return image
     xmin, ymin, xmax, ymax = box
     
-    image = cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 2)
-    cv2.putText(image, label, (xmin, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color,2)
+    image = cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 3)
+    image = cv2.rectangle(image, (xmin-2, ymin-40), (xmin+300, ymin), color, -1)
+    cv2.putText(image, f"{iou:.2f} |", (xmin+10, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255),2)
+    cv2.putText(image, label, (xmin+115, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255),2)
+    
     return image

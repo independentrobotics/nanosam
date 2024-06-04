@@ -15,14 +15,13 @@
 
 import numpy as np
 import cv2 
-import matplotlib.pyplot as plt
 import PIL.Image
 import argparse, sys
 
 from nanosam.trt_sam import SAMPredictor, markup_image
 
 asset_path = "/opt/nanosam/assets/"
-outpath = "/root/"
+outpath = "/root/out/"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -30,10 +29,12 @@ if __name__ == "__main__":
     parser.add_argument('-b', '--bbox',action='store_true', help="Test bounding box input.")
     parser.add_argument('-m', '--mask',action='store_true', help="Test mask input.")
     parser.add_argument('-o', '--owl',action='store_true', help="Test OWL-ViT prompt input.")
+    parser.add_argument('-a', '--amg',action='store_true', help="Test automatic mask generation.")
+    parser.add_argument('-s', '--sev',action='store_true', help="Test several masks being plotted.")
     
     args = parser.parse_args()
 
-    if not (args.points or args.bbox or args.mask or args.owl):
+    if not (args.points or args.bbox or args.mask or args.owl or args.amg or args.sev or args.all):
         print("NO INPUT TYPE SPECIFIED. Use one of the options listed below. ")
         parser.print_help(sys.stderr)
         sys.exit(1)
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     predictor = SAMPredictor()
 
     # Read image and run image encoder
-    image = PIL.Image.open( asset_path + "dogs.jpg")
+    image = cv2.imread( asset_path + "dogs.jpg")
     predictor.set_image(image)
 
     if args.points:
@@ -51,22 +52,21 @@ if __name__ == "__main__":
         fg_points = [[225, 225], [400,400], [650,350], [350,650]]
         bg_points = [[700, 150]]
         
-        boxes, masks = predictor.predict_points(fg_points, bg_points, iterations=2)
+        mask, box, iou = predictor.predict_points(fg_points, bg_points, iterations=3)
+
         img = cv2.imread(asset_path + "dogs.jpg")
-        out = markup_image(img, None, boxes, masks)
-        cv2.imshow("points", out)
-        cv2.waitKey()
+        out = markup_image(img, mask, box, iou)
+        cv2.imwrite(outpath+"sam_points.jpg", out)
 
     if args.bbox:
         # Segment using bounding box
-        tl = [100,100]  # x0, y0, x1, y1
-        br = [850,759]
+        # x0, y0, x1, y1
+        bbox = [100,100, 850,759]
 
-        boxes, masks = predictor.predict_bbox(tl, br)
+        mask, box, iou = predictor.predict_bbox(bbox, iterations=3)
         img = cv2.imread(asset_path + "dogs.jpg")
-        out = markup_image(img, None, boxes, masks)
-        cv2.imshow("bbox", out)
-        cv2.waitKey()
+        out = markup_image(img, mask, box, iou)
+        cv2.imwrite(outpath+"sam_bbox.jpg", out)
                     
     if args.mask:
         # Segment using mask (here provided by an opencv color threshold.)
@@ -76,17 +76,43 @@ if __name__ == "__main__":
         upper_range = np.array([15, 255, 255])
         thresh = cv2.inRange(hsv, lower_range, upper_range)
 
-        boxes, masks = predictor.predict_mask(thresh, iterations=1)
-        out = markup_image(img, None, boxes, masks)
-        cv2.imshow("mask", out)
-        cv2.waitKey()
+        mask, box, iou = predictor.predict_mask(thresh, iterations=3)
+        out = markup_image(img, mask, box, iou)
+        cv2.imwrite(outpath+"sam_mask.jpg", out)
 
     if args.owl:
         img = cv2.imread(asset_path + "dogs.jpg")
         prompt = "a dog"
         
-        boxes, masks = predictor.predict_prompt(prompt)
+        mask, box, iou = predictor.predict_prompt(prompt, iterations=3)
         
-        out = markup_image(img, [prompt] * len(boxes), boxes, masks)
-        cv2.imshow("prompt", out)
-        cv2.waitKey()
+        out = markup_image(img, mask, box, iou, prompt)
+        cv2.imwrite(outpath+"sam_prompt.jpg", out)
+    
+    if args.sev:
+        img = cv2.imread(asset_path + "dogs.jpg")
+
+        fg_points = [[225, 225], [400,400], [650,350], [350,650]]
+        bg_points = [[700, 150]]
+        mask1, box1, iou1 = predictor.predict_points(fg_points, bg_points, iterations=3)
+
+        fg_points = [[800,225], [850, 450], [790,600]]
+        bg_points = [[700, 150]]
+        mask2, box2, iou2 = predictor.predict_points(fg_points, bg_points, iterations=3)
+
+        masks = [mask1, mask2]
+        boxes = [box1, box2]
+        ious = [iou1, iou2]
+        
+        out = markup_image(img, masks, boxes, ious)
+        cv2.imwrite(outpath+"sam_several_masks.jpg", out)
+
+
+    if args.amg:
+        img = cv2.imread(asset_path + "dogs.jpg")
+        masks, boxes, ious = predictor.automatic_mask_generation(img)
+        
+        out = markup_image(img, masks, boxes, ious)
+        cv2.imwrite(outpath+"sam_amg.jpg", out)
+
+ 

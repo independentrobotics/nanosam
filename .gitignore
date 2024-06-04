@@ -13,3 +13,4 @@ data
 .nv
 .bash_history
 .python_history
+build/*

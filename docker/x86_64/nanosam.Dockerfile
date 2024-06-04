@@ -2,7 +2,7 @@
 # Initial setup
 ##############################
 # If you run into issues with CUDA version, you should switch to a different CUDA image.
-FROM nvcr.io/nvidia/cuda:12.2.2-devel-ubuntu22.04
+FROM nvcr.io/nvidia/cuda:12.2.2-devel-ubuntu22.04 as base
 SHELL ["/bin/bash", "-c"]
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -27,27 +27,36 @@ RUN git clone https://github.com/NVIDIA-AI-IOT/torch2trt && \
     python3 -m pip install .
 
 # Install Python dependencies for NanoSAM
-RUN python3 -m pip install transformers timm matplotlib gdown wget
+RUN python3 -m pip install transformers timm matplotlib gdown wget scipy
 RUN python3 -m pip install git+https://github.com/openai/CLIP.git
 
 # Install the NanoSAM Python package
+
+COPY --from=ir_utils . /opt/ir_utils
+RUN cd ir_utils && \
+    python3 -m pip install .
+
+
+#################################
+# Local version: We copy from local directories.
+#################################
+FROM base as local
+# # Grab most recent from build directory.
+COPY --from=nanosam . /opt/nanosam
+RUN cd nanosam && \ 
+    python3 -m pip install .  
+
+RUN cp /opt/nanosam/examples/basic_usage.py /root/example.py
+WORKDIR /root
+#################################
+# Github version: We clone from Github
+#################################
+FROM base as github
 
 # Pull most recent from Github
 RUN git clone https://github.com/independentrobotics/nanosam.git && \
     cd nanosam && \
     python3 setup.py install
 
-# # Grab most recent from build directory.
-# COPY nanosam /opt/nanosam
-# RUN cd nanosam && \
-#     python3 -m pip install .
-
 RUN cp /opt/nanosam/examples/basic_usage.py /root/example.py
-
-
-COPY ir_utils /opt/ir_utils
-RUN cd ir_utils && \
-    python3 -m pip install .
-
 WORKDIR /root
-ENV DISPLAY=":0"

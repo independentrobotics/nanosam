@@ -8,6 +8,6 @@ docker run \
     --volume="/dev/shm:/dev/shm" \
     --volume="$HOME/.config/independent-robotics.yaml:/root/.config/independent-robotics.yaml" \
     --volume="$HOME/IndependentRobotics:/root/IndependentRobotics" \
-    --volume="$HOME/docker_out:/root/out" \
+    --volume="$1:/root/out" \
     nanosam:latest \
-    /bin/bash
+    /usr/bin/python3 /root/example.py "${@:2}"

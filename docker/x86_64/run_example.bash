@@ -5,7 +5,6 @@ docker run \
     --ipc=host \
     --pid=host \
     --volume="$HOME/.Xauthority:/root/.Xauthority:rw" \
-    --volume="/dev/shm:/dev/shm" \
     --volume="$HOME/.config/independent-robotics.yaml:/root/.config/independent-robotics.yaml" \
     --volume="$HOME/IndependentRobotics:/root/IndependentRobotics" \
     --volume="$1:/root/out" \

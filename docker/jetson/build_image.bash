@@ -1,1 +1,1 @@
-DOCKER_BUILDKIT=0 docker build -t ros-nanosam -f ./ros_nanosam.Dockerfile .
+DOCKER_BUILDKIT=0 docker build -t nanosam -f ./nanosam.Dockerfile .

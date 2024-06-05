@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
-from matplotlib import colormaps
-from matplotlib.colors import to_rgb
+import matplotlib.pyplot as plt
 from typing import List, Optional, overload
 import numpy.typing as npt
 from scipy.cluster.vq import kmeans
@@ -72,17 +71,14 @@ def prune_owl_detections(detections, max_detections=5):
 
     return filtered
 
-
-def random_color():
-    c = np.random.choice(range(256), size=3)
-    return (int(c[0]), int(c[1]), int(c[2]))
-
-def mpl_color(k, map='Dark2'):
-    cmap = colormaps[map]
-    if k >= cmap.N:
-        return random_color()
-    else:
-        return [int(c*256) for c in to_rgb(cmap(k))]
+def get_colors(count):
+    cmap = plt.get_cmap("rainbow", count)
+    colors = []
+    for i in range(count):
+        color = cmap(i)
+        color = [int(255 * value) for value in color]
+        colors.append(tuple(color[0:3]))
+    return colors
     
 @overload
 def markup_image(
@@ -144,9 +140,10 @@ def markup_image(
 
     running_mask = np.zeros(image.shape, image.dtype)
     running_bbox = np.zeros(image.shape, image.dtype)
-    
+    colors = get_colors(len(masks))
+
     for k, m, b, i, l in sorted(zip(range(len(masks)), masks, boxes, ious, labels), key=lambda set:set[3]):
-        c = mpl_color(k)
+        c = colors[k]
         running_mask = draw_mask(running_mask, m, c, l)
         running_bbox = draw_box(running_bbox, b, c, i, l)
 

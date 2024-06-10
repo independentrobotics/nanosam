@@ -1,6 +1,6 @@
 TARGET=$1
-IR_UTILS=/home/michael/code/ir_utils/
-NANOSAM=/home/michael/code/nanosam/
+IR_UTILS=$HOME/code/ir_utils/
+NANOSAM=$HOME/code/nanosam/
 
 docker build --tag nanosam --file ./nanosam.Dockerfile \
     --target=$TARGET \

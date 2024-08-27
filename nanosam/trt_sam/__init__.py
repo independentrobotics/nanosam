@@ -15,4 +15,4 @@
 
 from .sam_predictor import SAMPredictor
 from .owlvit_predictor import OwlVitPredictor
-from .utils import markup_image
+from .sam_drawing import markup_image

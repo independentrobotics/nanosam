@@ -108,7 +108,7 @@ def preprocess_image(image: PIL.Image.Image, size: int = 512):
 '''
     Internal use only, this function performs point preprocessing. 
 '''
-def preprocess_points(points: npt.NDArray[np.float_], image_size: Tuple[int, int], size: int = 1024):
+def preprocess_points(points: npt.NDArray[np.float64], image_size: Tuple[int, int], size: int = 1024):
     scale = size / max(*image_size)
     points = points * scale
     return points
@@ -116,7 +116,7 @@ def preprocess_points(points: npt.NDArray[np.float_], image_size: Tuple[int, int
 '''
     Internal use only, this function performs mask preprocessing.
 '''
-def preprocess_mask(mask: npt.NDArray[np.float_], image_size: Tuple[int, int], size = 256):
+def preprocess_mask(mask: npt.NDArray[np.float64], image_size: Tuple[int, int], size = 256):
 
     # Resize and pad mask
     height, width = image_size
@@ -146,7 +146,7 @@ def preprocess_mask(mask: npt.NDArray[np.float_], image_size: Tuple[int, int], s
 '''
     Internal use only, this function performs the actual operation of mask decoding using a TRT engine.
 '''
-def run_mask_decoder(mask_decoder_engine: TRTModule, features, points:npt.NDArray[np.float_]=None, point_labels:npt.NDArray[np.float_]=None, mask_input:npt.NDArray[np.float_]=None):
+def run_mask_decoder(mask_decoder_engine: TRTModule, features, points:npt.NDArray[np.float64]=None, point_labels:npt.NDArray[np.float64]=None, mask_input:npt.NDArray[np.float64]=None):
     if points is not None:
         assert point_labels is not None
         assert len(points) == len(point_labels)
@@ -175,7 +175,7 @@ def run_mask_decoder(mask_decoder_engine: TRTModule, features, points:npt.NDArra
     Internal use only, this function upscales a mask from its original size to the image
     size.
 '''
-def upscale_mask(mask:npt.NDArray[np.float_], image_shape:Tuple[int, int], size:int=256):
+def upscale_mask(mask:npt.NDArray[np.float64], image_shape:Tuple[int, int], size:int=256):
     
     if image_shape[1] > image_shape[0]:
         lim_x = size
@@ -244,9 +244,9 @@ class SAMPredictor(object):
     '''
     def __predict(
             self, 
-            points:npt.NDArray[np.float_], 
-            point_labels:npt.NDArray[np.float_], 
-            mask_input:Optional[npt.NDArray[np.float_]]=None, 
+            points:npt.NDArray[np.float64], 
+            point_labels:npt.NDArray[np.float64], 
+            mask_input:Optional[npt.NDArray[np.float64]]=None, 
             iterations:int=1
             ):
         
@@ -377,7 +377,7 @@ class SAMPredictor(object):
             Bounding Box ([xmin, ymin, xmax, ymax])
             IOU (a float indicating the quality of the mask.)
     '''
-    def predict_mask(self, mask:npt.NDArray[np.float_], iterations:int=1) -> Tuple[npt.NDArray[np.bool_], List[int], float]:
+    def predict_mask(self, mask:npt.NDArray[np.float64], iterations:int=1) -> Tuple[npt.NDArray[np.bool_], List[int], float]:
         if iterations < 1:
             raise ValueError(f"Iteractions cannot be less than 1, you passed iterations={iterations}")
         

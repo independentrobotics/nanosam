@@ -55,7 +55,7 @@ def markup_image(
         )-> npt.NDArray[np.float64]:
     
     # Allow input as singles or lists.
-    if len(boxes) < 1 or not isinstance(boxes[0], list):
+    if len(boxes) > 0  and not isinstance(boxes[0], list):
         boxes = [boxes]
     if not isinstance(masks, list):
         masks = [masks]
@@ -63,6 +63,10 @@ def markup_image(
         ious = [ious]
     if isinstance(labels, str):
         labels = [labels]
+
+
+    if len(boxes) == 0 or len(masks) == 0 or len(labels) == 0:
+        return image
     
     # Check some basic things about input data.
     if labels is None or len(labels) < 1:

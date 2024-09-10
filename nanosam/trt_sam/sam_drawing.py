@@ -103,11 +103,12 @@ def draw_mask(img, mask, color, label=None):
 def draw_box(image, box, color, iou, label=None):
     if len(box) < 1:
         return image
-    xmin, ymin, xmax, ymax = box
-    
+
+    xmin, ymin, xmax, ymax = [int(b) for b in box]
+
     image = cv2.rectangle(image, (xmin, ymin), (xmax, ymax), color, 3)
     image = cv2.rectangle(image, (xmin-2, ymin-40), (xmin+300, ymin), color, -1)
     cv2.putText(image, f"{iou:.2f} |", (xmin+10, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255),2)
     cv2.putText(image, label, (xmin+115, ymin-10), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,255,255),2)
-    
+        
     return image
